@@ -6,11 +6,7 @@ import platform
 import shutil
 import sys
 import warnings
-from setuptools import find_packages, setup
-
-import torch
-from torch.utils.cpp_extension import (BuildExtension, CppExtension,
-                                       CUDAExtension)
+from setuptools import Extension, find_packages, setup
 
 
 def readme():
@@ -27,16 +23,15 @@ def get_version():
         exec(compile(f.read(), version_file, 'exec'))
     return locals()['__version__']
 
-
 def make_cuda_ext(name, module, sources, sources_cuda=[]):
 
     define_macros = []
-    extra_compile_args = {'cxx': []}
+    extra_compile_args = []
 
-    if torch.cuda.is_available() or os.getenv('FORCE_CUDA', '0') == '1':
+    if 'CUDA_HOME' in os.environ or os.getenv('FORCE_CUDA', '0') == '1':
         define_macros += [('WITH_CUDA', None)]
-        extension = CUDAExtension
-        extra_compile_args['nvcc'] = [
+        extension = Extension
+        extra_compile_args += [
             '-D__CUDA_NO_HALF_OPERATORS__',
             '-D__CUDA_NO_HALF_CONVERSIONS__',
             '-D__CUDA_NO_HALF2_OPERATORS__',
@@ -44,7 +39,7 @@ def make_cuda_ext(name, module, sources, sources_cuda=[]):
         sources += sources_cuda
     else:
         print(f'Compiling {name} without CUDA')
-        extension = CppExtension
+        extension = Extension
 
     return extension(
         name=f'{module}.{name}',
